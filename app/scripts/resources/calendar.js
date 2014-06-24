@@ -165,6 +165,8 @@ colorDays:function(svg,input_data,monthPath,rect,color,dispType){
         }) //create pair value
         .map(input_data); //Turns code into an array of objects
 
+        svg.selectAll('rect.day').attr('style','fill:#fff');
+
         //Below code colors in the calendar
         rect.filter(function(d) { return format(d) in data; })
 	          .attr("style", function(d) { 

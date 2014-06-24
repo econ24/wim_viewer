@@ -125,49 +125,51 @@ function parseDataA(input,classInfo){
 
 function parseDataF(input,classInfo){
   var output = [];
-  input.rows.forEach(function(row){
-    if(classInfo == 0 || classInfo == row.f[4].v){
-        var item = {}
-        var x = 0
-        var string = ""
-        var yearStr = row.f[5].v
-        if(row.f[5].v < 10){
-          yearStr = "0"+row.f[5].v
-        }
-        if(row.f[2].v < 10){
-              if(row.f[3].v < 10){
-                string= "20"+yearStr+"-0"+row.f[2].v+"-0"+row.f[3].v
-              }else{
-                string = "20"+yearStr+"-0"+row.f[2].v+"-"+row.f[3].v
-              }
-        }else{
-              if(row.f[3].v < 10){
-                string = "20"+yearStr+"-"+row.f[2].v+"-0"+row.f[3].v
-              }else{
-                string = "20"+yearStr+"-"+row.f[2].v+"-"+row.f[3].v
-              }
-        }
+  if(input.rows != undefined){
+    input.rows.forEach(function(row){
+      if(classInfo == 0 || classInfo == row.f[4].v){
+          var item = {}
+          var x = 0
+          var string = ""
+          var yearStr = row.f[5].v
+          if(row.f[5].v < 10){
+            yearStr = "0"+row.f[5].v
+          }
+          if(row.f[2].v < 10){
+                if(row.f[3].v < 10){
+                  string= "20"+yearStr+"-0"+row.f[2].v+"-0"+row.f[3].v
+                }else{
+                  string = "20"+yearStr+"-0"+row.f[2].v+"-"+row.f[3].v
+                }
+          }else{
+                if(row.f[3].v < 10){
+                  string = "20"+yearStr+"-"+row.f[2].v+"-0"+row.f[3].v
+                }else{
+                  string = "20"+yearStr+"-"+row.f[2].v+"-"+row.f[3].v
+                }
+          }
 
-            for(var i = 0;i<output.length;i++){
-              if(output[i].date == string){
-                output[i].numTrucks = parseInt(row.f[1].v) + parseInt(output[i].numTrucks)
-                output[i].totalWeight = parseInt(row.f[6].v) + parseInt(output[i].totalWeight)
-                x = 1
-                break
+              for(var i = 0;i<output.length;i++){
+                if(output[i].date == string){
+                  output[i].numTrucks = parseInt(row.f[1].v) + parseInt(output[i].numTrucks)
+                  output[i].totalWeight = parseInt(row.f[6].v) + parseInt(output[i].totalWeight)
+                  x = 1
+                  break
+                }
               }
-            }
-            if(x == 0){
-              item.date = string;
-              item.numTrucks = parseInt(row.f[1].v);
-              item.totalWeight = parseInt(row.f[6].v)
-              item.averageWeight = parseInt(row.f[6].v) / parseInt(row.f[1].v)
-              output.push(item);
-            }
-            x = 0 
-         }
+              if(x == 0){
+                item.date = string;
+                item.numTrucks = parseInt(row.f[1].v);
+                item.totalWeight = parseInt(row.f[6].v)
+                item.averageWeight = parseInt(row.f[6].v) / parseInt(row.f[1].v)
+                output.push(item);
+              }
+              x = 0 
+           }
 
-        
-  });
+          
+    });
+  }
  
   return output
 };

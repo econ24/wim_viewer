@@ -14,7 +14,7 @@ var AADTGraph ={
 		    .attr("transform", "translate(" + AADTGraph.margin.left + "," + AADTGraph.margin.top + ")");
 
 	},
-	drawAADTGraph:function(graphData){
+	drawAADTGraph:function(graphData,classT){
 		//console.log('graphData',graphData);
 
 		var x = d3.scale.ordinal()
@@ -68,11 +68,19 @@ var AADTGraph ={
 		  		$(this).attr('opacity',0.5);
 		  		$('#map_station_'+graphData[i].stationId).attr('stroke-width','2px');
 		  		$('#map_station_'+graphData[i].stationId).attr('stroke','yellow');
-		  		var info =  "<p class="+graphData[i].stationId+">Station: " +graphData[i].stationId+
-							"<br> Number of years of data: "+graphData[i].years.length+
-							"<br>ACompleteness: "+totalAADT(graphData[i].years,"percent")+
-							"<br>AAADT: "+totalAADT(graphData[i].years)+
-							"</p>";
+		  		if(classT != "class"){
+			  		var info =  "<p class="+graphData[i].stationId+">Station: " +graphData[i].stationId+
+								"<br> Number of years of data: "+graphData[i].years.length+
+								"<br>ACompleteness: "+totalAADT(graphData[i].years,"percent")+
+								"<br>AAADT: "+totalAADT(graphData[i].years)+
+								"</p>";
+				}
+				else{
+					var info = "<p class="+graphData[i].stationId+">Station: " +graphData[i].stationId+
+					"<br> Number of years of data: "+graphData[i].years.length+
+					"<br> ADT: "+totalAADT(graphData[i].years)+
+					"</p>"
+				}
 
 		  		$("#stationInfo").html(info);
 		  		//$("#stationInfo").show();
@@ -89,7 +97,8 @@ var AADTGraph ={
 			var total = 0;
 
 			for(var i = 0;i<arr.length;i++){
-				if(typeof check === 'undefined'){ total = total + arr[i].AADT; }
+				if(classT === "class"){total = total + arr[i].ADT;}
+				else if(typeof check === 'undefined'){ total = total + arr[i].AADT; }
 				else{ total = total + arr[i].percent; }
 			}
 
