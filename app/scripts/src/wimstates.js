@@ -241,9 +241,13 @@
 			  		data.rows.forEach(function(row){
 				  			var rowStation = row.f[0].v;
 				  			if(getStationIndex(rowStation,"class") == -1) {
-				  				stationsClass.push({'stationId':rowStation, years:[]})
+				  				stationsClass.push({'stationId':rowStation, years:[],heights:[],'AAPT':0,'AASU':0,'AATT':0})
+				  				stationsClass[getStationIndex(rowStation,"class")].heights.push({'y0':0,'y1':0})
+				  				stationsClass[getStationIndex(rowStation,"class")].heights.push({'y0':0,'y1':0})
+				  				stationsClass[getStationIndex(rowStation,"class")].heights.push({'y0':0,'y1':0})
 				  			}
 				  			stationsClass[getStationIndex(rowStation,"class")].years.push({'year':row.f[1].v,'ADT':Math.round(row.f[2].v),'APT':Math.round(row.f[3].v),'ASU':Math.round(row.f[4].v),'ATT':Math.round(row.f[5].v)});
+				  			
 			  		});
 		  		}
 		  		if (centered) {

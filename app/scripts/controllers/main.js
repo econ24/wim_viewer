@@ -50,10 +50,18 @@ angular.module('wimViewerApp')
 
 AADTGraph.initAADTGraph("#barGraph");
 
+/*
+
+Below is where chart is drawn. Test Array set up below
+
+*/
+
+var testingArr = [true,true,true]
+
     $scope.$watch('stationsClass', function() {
       if($scope.stationsClass != undefined){
           if($scope.stationsClass.length != 0){
-            AADTGraph.drawAADTGraph($scope.stationsClass,"class");
+            AADTGraph.drawAADTGraph($scope.stationsClass,"class",testingArr);
           }
           
         }
