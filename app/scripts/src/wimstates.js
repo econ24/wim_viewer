@@ -4,128 +4,131 @@
 	}
 
 	var mapDIV = null,
-		SVG = null,
 		popup = null,
-		geoJSON = null,
+		statesJSON = null
+		__JSON__ = {},
 		centered = null,
 		$scope = null,
-		clicked = false;
+		clicked = null,
+		stations = null;
 
-	var width = null,
-		height = 600;
+	var AVLmap = null;
 
-	var projection = d3.geo.albersUsa()
-		.scale(1 << 10);
+	var width = 1000,
+		height = 500;
 
-	var path = d3.geo.path()
-		.projection(projection);
+	var projection = null,
+		zoom = null,
+		path = null;
 
 	var colorScale = d3.scale.linear()
 		.range(['#deebf7', '#08306b']);
 
 	function _drawMap() {
-		var states = SVG.selectAll('path')
-			.data(geoJSON.features)
 
-		states.enter().append('path')
-			.attr('fill', function(d) {
-				if (typeof d.properties.stations !== 'undefined') {
-					return colorScale(d.properties.stations.length);
-				} else {
-					return '#999';
-				}
-			})
-			.attr('class', 'state')
-			.attr('d', path)
-			.on('click', function(d) {
-				if (!clicked) {
-					clicked = true;
-					_clickZoom(d);
-				}
-			})
-			.on('mouseover', function(d) {
-				if (typeof d.properties.stations !== 'undefined') {
-					d3.select(this).classed('state-hover', true);
-				}
-			})
-			.on('mouseout', function(d) {
-				if (typeof d.properties.stations !== 'undefined') {
-					d3.select(this).classed('state-hover', false);
-				}
-			});
+    	var states = mapDIV.append('svg')
+    		.selectAll('path')
+    		.data(statesJSON.features);
 
-		function _clickZoom(d) {
-			if (typeof d.properties.stations === 'undefined') {
-				return;
-			}
-			var x, y, k;
+    	states.enter()
+    		.append('path')
+    		.attr('fill', 'none')
+    		.attr('stroke', '#000')
+    		.attr('d', path)
+    		.each(function(d, i) {
+    			if (d.properties.name) {
+		    		__JSON__[d.id] = d;
+		    		var marker = avl.MapMarker(projection.invert(path.centroid(d)),
+						{name: d.id, BGcolor: colorScale(d.properties.stations.length), click: _clicked});
+		    		AVLmap.addMarker(marker);
+		    	}
+    		});
+
+    	AVLmap.addAlert(_update);
+    	AVLmap.zoomMap();
+
+    	function _update() {
+    		states.attr('d', path);
+    		if (stations) {
+    			_updateStations();
+    		}
+    	}
+
+		function _updateStations() {
+			stations
+				.style('left', function(d) {
+					return (projection(d.geometry.coordinates)[0]-10)+"px";
+				})
+				.style('top', function(d) {
+					return (projection(d.geometry.coordinates)[1]-10)+"px";
+				})
+		};
+
+		function _clicked(name) {
+	  		if (d3.event.defaultPrevented) return;
 
 			var collection = {
 				type: 'FeatureCollection',
 				features: []
 			};
-			var	URL;
-
-			if (d && centered !== d) {
-			    var bounds = path.bounds(d);
-			    var wdth = bounds[1][0] - bounds[0][0];
-			    var hght = bounds[1][1] - bounds[0][1];
-			    x = bounds[1][0] - wdth/2
-			    y = bounds[1][1] - hght/2
-			    k = Math.floor(Math.min(width/wdth, height/hght));
-			    centered = d;
-			} else {
-			    x = width / 2;
-			    y = height / 2;
-			    k = 1;
-			    centered = null;
+			if (name == clicked) {
+				_drawStationPoints(collection);
+				clicked = null;
+				return;
 			}
+	  		clicked = name;
 
-			if (centered) {
-				URL = '/stations/stateGeo/';
-				_getStationPoints();
+	    	var	bounds = path.bounds(__JSON__[name]),
 
-				_getStationData(d);
-			} else {
-				d3.selectAll('.station').remove();
+	    		wdth = bounds[1][0] - bounds[0][0],
+	    		hght = bounds[1][1] - bounds[0][1],
+	    		center = projection.invert([bounds[0][0] + wdth/2,
+	    								    bounds[0][1] + hght/2]),
 
-				collection.features = [];
-			  		
-		  		$scope.$apply(function() {
-		  			$scope.stations = [];
-		  		});
-				clicked = false;
-			}
+	    		k = Math.min(width/wdth, height/hght),
+	    		scale = zoom.scale()*k;
 
-			SVG.selectAll("path")
-			    .classed("state-active", centered && function(d) { return d === centered; });
+	    	if (name == '2') {
+	    		// this is a patch required to handle Alaska's odd geometry
+	    		center = [-152.2683, 65.3850];
+	    		scale = 8900;
+	    	}
 
-			SVG.transition()
-			    .duration(750)
-			    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")"+
-			    				    "scale(" + k + ")"+
-			    				    "translate(" + -x + "," + -y + ")");
+			zoom.scale(scale);
+	        projection
+	            .scale(zoom.scale() / 2 / Math.PI)
+	            .center(center)
+	            .translate([width / 2, height / 2])
+	            .translate(projection([0, 0]))
+	            .center([0, 0]);
+
+	        zoom.translate(projection.translate());
+
+			_getStationPoints();
+
+	        AVLmap.zoomMap();
 
 			function _getStationPoints() {
-				wimXHR.get(URL + d.id, function(error, data) {
+				var URL = '/stations/stateGeo/';
+				wimXHR.get(URL + name, function(error, data) {
 	            	if (error) {
 	            		console.log(error);
 	            		return;
 	            	}
-					_drawStationPoints(_formatData(d, data));
-					clicked = false;
+					_drawStationPoints(_formatData(__JSON__[name], data));
 				})
 			}
 
 			function _formatData(stateData, stationData) {
+				// get valid geometries
 				var stations = {};
+				// need this to filter out bad geometry
 				stationData.features.forEach(function(d) {
 					if (d.geometry.coordinates[0] != 0 && d.geometry.coordinates[1] != 0) {
 						stations[d.properties.station_id] = d.geometry;
 					}
 				});
 
-				//stateData.properties.stations.forEach(function(d) {
 				for (var i in stateData.properties.stations) {
 					var d = stateData.properties.stations[i];
 
@@ -145,31 +148,30 @@
 				}
 				return collection;
 			}
-		} // end _clickZoom
+		} // end _clicked
 
 		function _drawStationPoints(collection) {
-			var stations = SVG.selectAll('circle')
+			stations = mapDIV.selectAll('.station-point')
 				.data(collection.features);
 
 			stations.exit().remove();
 
-			stations.enter().append('circle');
+			stations.enter().append('div');
 
-			stations.attr('class', 'station')
-				.attr('r', 1.5)
-				.attr('opacity', 0.66)
-				.attr('fill', function(d) {
+			stations.attr('class', 'station-point')
+				.style('opacity', 0.66)
+				.style('background', function(d) {
 					if (d.properties.type == 'wim') {
 						return '#081d58';
 					} else {
 						return '#ff0000';
 					}
 				})
-				.attr('cx', function(d) {
-					return projection(d.geometry.coordinates)[0];
+				.style('left', function(d) {
+					return (projection(d.geometry.coordinates)[0]-10)+"px";
 				})
-				.attr('cy', function(d) {
-					return projection(d.geometry.coordinates)[1];
+				.style('top', function(d) {
+					return (projection(d.geometry.coordinates)[1]-10)+"px";
 				})
 				.on('mouseover', function(d) {
 					d3.select(this)
@@ -191,8 +193,8 @@
 				})
 		}
 		// this function queries backend for all stations
-		// and then updates $scope.stations variable in
-		// order to draw list of stations below map
+		// and then updates $scope.stations variable which
+		// is used elsewhere
 		function _getStationData(stateData) {
 			var URL = '/stations/byState/';
 			var id = stateData.id.toString();
@@ -235,62 +237,76 @@
 		var wdth = parseInt(popup.style('width')),
 			hght = parseInt(popup.style('height'));
 
-		var xPos = d3.event.offsetX - wdth/2,
-			yPos = (d3.event.offsetY-hght-15);
+		var left = projection(d.geometry.coordinates)[0] - wdth - 5,
+			top = projection(d.geometry.coordinates)[1] - hght - 5;
 
-		if (yPos < 0) {
-			yPos = d3.event.offsetY + 20;
+		if (top < hght) {
+			top += hght + 10;
 		}
 
-		popup.style('left', xPos + 'px')
-			.style('top', yPos + 'px')
+		popup.style('left', left + 'px')
+			.style('top', top + 'px')
 			.style('display', 'block')
 			.html('<b>Station ID:</b> ' + d.properties.stationID)
 	}
 	// states is an array of state objects
 	wimstates.drawMap = function(id, states, $s) {
-		mapDIV = d3.select(id)
+		mapDIV = d3.select(id);
 
 		width = parseInt(mapDIV.style('width'));
-		projection.translate([width/2, height/2]);
+		height = width/2;
 
-		SVG = mapDIV.append('svg')
-			.attr('id', 'mapSVG')
-			.attr('height', height)
-			.attr('width', width)
-			.append('g');
+		mapDIV.style('width', width+"px")
+			.style('height', height+"px");
+
+var dmn = [5000, 200000];
+var rng = ["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"];
+var rng = rng.reverse();
+
+		AVLmap = avl.Map({id: id, minZoom: 3, maxZoom: 17})
+			.addLayer(avl.RasterLayer("http://{s}.tiles.mapbox.com/v3/am3081.map-lkbhqenw/{z}/{x}/{y}.png"))
+			.addLayer(avl.VectorLayer("http://localhost:8000/roads/{z}/{x}/{y}.topojson",
+				{properties:['type'], name: 'NY HPMS',
+				 choros: [{attr: 'aadt', domain: dmn, range: rng, style: 'stroke'}]}))
+			.addControl("zoom")
+			.addControl("info");
+
+
+		projection = AVLmap.projection();
+		zoom = AVLmap.zoom();
+		path = d3.geo.path().projection(projection);
 
 		popup = mapDIV.append('div')
-			.attr('class', 'station-popup')
+			.attr('class', 'station-popup');
 
 		$scope = $s;
 
 		// states object
-		var obj = {};
+		var statesObj = {};
 
-		var domain = [];
+		var domain = []; // colorScale domain
 
 		// load scope states data into states object
 		for (var i in states) {
-			obj[states[i].state_fips] = {stations: states[i].stations, name: states[i].name}
+			statesObj[states[i].state_fips] = {stations: states[i].stations, name: states[i].name}
 			domain.push(states[i].stations.length);
 		}
 		colorScale.domain(d3.extent(domain));
 
 		d3.json('./us-states-10m.json', function(error, states) {
 
-			geoJSON = topojson.feature(states, states.objects.states);
+			statesJSON = topojson.feature(states, states.objects.states);
 
 			var props;
-			geoJSON.features.forEach(function(d) {
+			statesJSON.features.forEach(function(d) {
 				// pad single digit FIPS with a 0 for compatibility
 				if (d.id.toString().match(/^\d$/)) {
 					d.id = '0' + d.id;
 				}
 				d.properties.fips = d.id.toString();
-				if (d.id in obj) {
-					d.properties.stations = obj[d.id].stations;
-					d.properties.name = obj[d.id].name;
+				if (d.id in statesObj) {
+					d.properties.stations = statesObj[d.id].stations;
+					d.properties.name = statesObj[d.id].name;
 				}
 			})
 

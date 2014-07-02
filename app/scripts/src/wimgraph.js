@@ -498,6 +498,7 @@
 				if (+data.rows[i].f[timeIndex].v === currentTimeIndex) {
 					// create a new data object for current time index
 					var dataObj = {};
+					
 					for (var j = 1; j < schema.length; j++) {
 						dataObj[schema[j]] = +data.rows[i].f[j].v;
 					}

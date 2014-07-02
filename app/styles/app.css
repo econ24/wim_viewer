@@ -230,4 +230,22 @@ footer {
   position: absolute;
   background-color: #6baed6;
   border: solid 5px #081d58;
+  z-index: 10;
+}
+
+.station-point {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+}
+
+/* HPMS type styles */
+.type-1 {
+  stroke-width: 6px;
+}
+.type-2 {
+  stroke-width: 4px;
+}
+.type-3 {
+  stroke-width: 2px;
 }
