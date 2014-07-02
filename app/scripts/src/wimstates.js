@@ -27,13 +27,21 @@
 	function _drawMap() {
 
     	var states = mapDIV.append('svg')
+    		.style('position', 'absolute')
+    		.style('z-index', -10)
     		.selectAll('path')
     		.data(statesJSON.features);
 
     	states.enter()
     		.append('path')
-    		.attr('fill', 'none')
-    		.attr('stroke', '#000')
+    		.attr('class', 'state')
+    		.attr('fill', function(d) {
+    			if (d.properties.name) {
+    				return colorScale(d.properties.stations.length);
+    			} else {
+    				return 'none';
+    			}
+    		})
     		.attr('d', path)
     		.each(function(d, i) {
     			if (d.properties.name) {

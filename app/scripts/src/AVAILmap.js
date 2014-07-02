@@ -668,7 +668,8 @@
             map = m;
             marker = map.append('div')
                 .attr('class', 'avl-marker')
-                .style('background', BGcolor);
+                .style('background', BGcolor)
+                .style('z-index', 10);
 
             if (click) {
                 marker.on('click', function() {
