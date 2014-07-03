@@ -691,7 +691,6 @@
 					data.Xmin = obj[time];
 				}
 				data.ticks.push(obj[time]);
-
 				objData = _reduce(formattedData[i].data, attr, keeper)
 				obj.data = objData.data;
 				data.Ymax = (objData.total > data.Ymax ? objData.total : data.Ymax);

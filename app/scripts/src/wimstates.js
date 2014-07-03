@@ -130,7 +130,7 @@
 				_drawStationPoints(collection);
 				prevMarker.BGcolor(prevColor);
 				clicked = prevMarker = prevColor = null;
-				_updateScopeStations([]);
+				_updateScopeStations();
 				return;
 			}
 			var name = marker.name();
@@ -162,6 +162,7 @@
 					}
 				})
 			}
+
 
 			function _formatData(stateData, stationData) {
 				// get valid geometries
@@ -240,42 +241,49 @@
 		// and then updates $scope.stations variable which
 		// is used elsewhere
 		function _getStationData(id) {
-			var URL = '/stations/byState/';
-			//var id = stateData.id;
-
 			id = id.toString();
 
 			if (id.match(/^\d$/)) {
 				id = '0' + id;
 			}
-		  	var stations = [];
+
+			URL = 'stations/byState/class/'
+			var stationsClass = [];
 
 			wimXHR.get(URL + id, function(error, data) {
-            	if (error) {
+				if (error) {
             		console.log(error);
             		return;
             	}
-
-		  		data.rows.forEach(function(row){
-		  			var rowStation = row.f[0].v;
-		  			
-		  			if(getStationIndex(rowStation) == -1) {
-		  				stations.push({'stationId':rowStation, years:[]})
-		  			}
-		  			stations[getStationIndex(rowStation)].years.push({'year':row.f[1].v,'percent':(row.f[4].v)*100,'AADT':Math.round(row.f[5].v)});
-		  		});
-		  		if (clicked) {
-		  			_updateScopeStations(stations);
+            	if(data.rows != undefined){
+			  		data.rows.forEach(function(row){
+				  			var rowStation = row.f[0].v;
+				  			if(getStationIndex(rowStation,"class") == -1) {
+				  				stationsClass.push({'stationId':rowStation, years:[],heights:[],'AAPT':0,'AASU':0,'AATT':0})
+				  				stationsClass[getStationIndex(rowStation,"class")].heights.push({'y0':0,'y1':0})
+				  				stationsClass[getStationIndex(rowStation,"class")].heights.push({'y0':0,'y1':0})
+				  				stationsClass[getStationIndex(rowStation,"class")].heights.push({'y0':0,'y1':0})
+				  			}
+				  			stationsClass[getStationIndex(rowStation,"class")].years.push({'year':row.f[1].v,'ADT':Math.round(row.f[2].v),'APT':Math.round(row.f[3].v),'ASU':Math.round(row.f[4].v),'ATT':Math.round(row.f[5].v)});
+				  			
+			  		});
+		  		}
+		  		if (centered) {
+			  		$scope.$apply(function(){
+			  			$scope.stationsClass = stationsClass;
+			  		});
 			  	}
+
 			});
 
-		  	function getStationIndex(stationID){
-		  		return stations.map(function(el) {return el.stationId;}).indexOf(stationID);
+		  	function getStationIndex(stationID,classT){
+		  		return stationsClass.map(function(el) {return el.stationId;}).indexOf(stationID)
 		  	}
 		}
 		function _updateScopeStations(data) {
 	  		$scope.$apply(function(){
-	  			$scope.stations = data;
+	  			$scope.stations = [];
+	  			$scope.stationsClass = [];
   			});
 		}
 	}
@@ -355,6 +363,7 @@ var rng = ["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a"
 			})
 
 			_drawMap();
+
 		})
 	}
 

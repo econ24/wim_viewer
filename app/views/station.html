@@ -11,6 +11,7 @@
   stroke-width: 2px;
 }
 
+
 </style>
 <!--<script src="scripts/resources/calendar.js"></script>-->
 <div class="row">
@@ -18,15 +19,20 @@
     <div class="col-sm-12 col-lg-12 col-md-12">
         <h2> Station ID : {{station}} </h2>
         <div class="thumbnail">
-            <div id='wimgraph'>
+            <div id='wimtable'>
             </div>
             <div id='calendar-controls' style='margin-left:10px;'>
               <label>Class:
               <select  class="form-control" ng-model="myClass" ng-options="item.id as item.label for item in values" style='width:75px;display:inline;margin-right:5px;'></select>
               </label>
+              <label>Data:
+              <select  class="form-control2" ng-model="myDataDisp" ng-options="item3.id as item3.label for item3 in values3" style='width:75px;display:inline;margin-right:5px;'></select>
+              </label>
+              <span ng-hide="myDataDisp=='Class'">
               <label>Display:
               <select  class="form-control2" ng-model="myDisp" ng-options="item2.id as item2.label for item2 in values2" style='width:75px;display:inline;margin-right:5px;'></select>
               </label>
+              </span>
                 <button class='btn btn-info' type="button" ng-click="loadCalendar()">Apply</button>
             </div>
             <div id="caldiv" class="ratings">
@@ -36,6 +42,9 @@
                 </div>
             
             </div>
+            <div id='wimgraph'>
+            </div>
+            
         </div>
     </div>
 

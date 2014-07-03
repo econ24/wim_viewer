@@ -5,11 +5,10 @@ angular.module('wimViewerApp')
   	$scope.stateFips = $routeParams['stateFips']
   	$scope.stations = []
 
-    var URL = '/stations/byState/'+$scope.stateFips;
+    var URL = 'stations/byState/'+$scope.stateFips;
 
     wimXHR.get(URL, function(error, data) {
-
-  		data.rows.forEach(function(row){
+      data.rows.forEach(function(row){
 
   			var rowStation = row.f[0].v;
   			
