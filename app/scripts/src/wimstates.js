@@ -16,7 +16,8 @@
 		XHR = null;
 
 	var AVLmap = null,
-		customControl,
+		resetZoom,
+		resetState,
 		width = 1000,
 		height = 500;
 
@@ -60,7 +61,7 @@
 		    	}
     		});
 
-    	customControl.click(function() {
+    	resetZoom.click(function() {
     		_zoomToBounds(path.bounds(dataCollection));
 
     		// if there is a pending xhr, then abort it
@@ -131,9 +132,16 @@
 				prevMarker.BGcolor(prevColor);
 				clicked = prevMarker = prevColor = null;
 				_updateScopeStations();
+				resetState.toggle(false);
 				return;
 			}
 			var name = marker.name();
+
+			resetState.click(function() {
+    			_zoomToBounds(path.bounds(__JSON__[name]));
+			});
+
+			resetState.toggle(true);
 
 	  		clicked = marker;
 
@@ -314,15 +322,14 @@
 		mapDIV.style('width', width+"px")
 			.style('height', height+"px");
 
-var dmn = [5000, 200000];
-var rng = ["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"].reverse();
-
 		AVLmap = avl.Map({id: id, minZoom: 3, maxZoom: 17})
 			.addLayer(avl.RasterLayer("http://{s}.tiles.mapbox.com/v3/am3081.map-lkbhqenw/{z}/{x}/{y}.png"))
 			.addControl("zoom")
 			.addControl("info");
 
-		customControl = AVLmap.customControl('avl-top-left', {name: 'Reset Zoom', position: 'avl-top-left'});
+		resetZoom = AVLmap.customControl({name: 'Reset Zoom', position: 'avl-top-left'});
+		resetState = AVLmap.customControl({name: 'Zoom to State', position: 'avl-top-left'});
+		resetState.toggle();
 
 		projection = AVLmap.projection();
 		zoom = AVLmap.zoom();

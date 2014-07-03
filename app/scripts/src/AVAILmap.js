@@ -607,13 +607,10 @@
         var callback = null;
 
         self.click = function(c) {
-            if (!c && callback) {
+            if (c===undefined && callback) {
                 return callback();
-            } else if (c === null) {
-                customControl.on('click', null);
-                return self;
             }
-            self.callback = c;
+            callback = c;
             customControl.on('click', c);
             return self;
         }
@@ -625,6 +622,17 @@
             name = n;
             label.text(name);
             return self;
+        }
+
+        self.toggle = function(t) {
+            if (t) {
+                customControl.style('display', 'block');
+            } else if (t === false) {
+                customControl.style('display', 'none');
+            } else {
+                var display = (customControl.style('display') === 'block' ? 'none' : 'block');
+                customControl.style('display', display);
+            }
         }
     }
     _CustomControl.prototype = Object.create(_Control.prototype);
@@ -876,7 +884,7 @@
         var mapTile = d3.geo.tile().size([width, height]);
 
         var projection  = d3.geo.mercator()
-            .scale((startZoom) / 2 / Math.PI)
+            .scale(startZoom / 2 / Math.PI)
             .translate([-width / 2, -height / 2]);
 
         var tileProjection = d3.geo.mercator();
@@ -966,6 +974,8 @@
             })
         }
 
+        self.zoomMap();
+
         self.drawLayer = function(layerObj) {
             var tiles = mapTile
                 .scale(zoom.scale())
@@ -1028,12 +1038,9 @@
                 	controls.update('layer', layer);
                 }
 
-                if (layers.length === 1) {
-                    self.zoomMap();
-                } else {
-                    self.drawLayer(layer);
-                }
-            } else {
+                self.drawLayer(layer);
+            }
+            else {
                 throw new AVAILmapException("No Layer Object argument");
             }
             return self;
@@ -1055,12 +1062,9 @@
 
                 rasterLayer = layer;
 
-                if (layers.length === 0) {
-                    self.zoomMap();
-                } else {
-                    self.drawRasterLayer();
-                }
-            } else {
+                self.drawRasterLayer();
+            }
+            else {
                 throw new AVAILmapException("No Layer Object argument");
             }
             return self;
@@ -1118,7 +1122,7 @@
             controls.addControl(type, position);
             return self;
         }
-        self.customControl = function(position, options) {
+        self.customControl = function(options) {
             if (controls === null) {
                 controls = new _Controls(self, map, projection, zoom);
             }
