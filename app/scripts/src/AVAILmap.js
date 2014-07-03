@@ -593,24 +593,55 @@
     _MarkerControl.prototype = Object.create(_Control.prototype);
     _MarkerControl.prototype.constructor = _MarkerControl;
 
+    function _CustomControl(map, position) {
+        _Control.call(this, map, 'avl-custom-control', position);
+
+        var self = this,
+            name = 'Custom Control';
+
+        var customControl = self.DOMel;
+
+        var label = customControl.append('div')
+            .attr('class', 'avl-list avl-active');
+
+        var callback = null;
+
+        self.click = function(c) {
+            if (!c && callback) {
+                return callback();
+            } else if (c === null) {
+                customControl.on('click', null);
+                return self;
+            }
+            self.callback = c;
+            customControl.on('click', c);
+            return self;
+        }
+
+        self.name = function(n) {
+            if (!n) {
+                return name;
+            }
+            name = n;
+            label.text(name);
+            return self;
+        }
+    }
+    _CustomControl.prototype = Object.create(_Control.prototype);
+    _CustomControl.prototype.constructor = _CustomControl;
+
     // main controls container constructor function
     function _Controls(mapObj, map, projection, zoom) {
         var self = this,
         	controls = {},
+            customControls = {},
+            customControlsIDs = 0,
 			allPositions = ['avl-top-right', 'avl-bottom-right', 'avl-bottom-left', 'avl-top-left'],
             positionsUsed = {'avl-top-right': false, 'avl-bottom-right': false,
 							 'avl-bottom-left': false, 'avl-top-left': false};
 
         self.addControl = function(type, position) {
-			position = position || 'avl-top-right';
-			
-			var index = allPositions.indexOf(position);
-			
-			while (positionsUsed[position]) {
-				index = (index + 1) % allPositions.length;
-				position = allPositions[index];
-			}
-			positionsUsed[position] = true;
+            position = _getPosition(position);
 			
             if (type === 'info' && !controls.info) {
                 controls.info = new _InfoControl(map, projection, zoom, position);
@@ -624,6 +655,36 @@
             else if (type === 'marker' && !controls.marker) {
                 controls.marker = new _MarkerControl(mapObj, map, projection, zoom, position);
             }
+        }
+        function _getPosition(pos) {
+            pos = pos || 'avl-top-right';
+            
+            var index = allPositions.indexOf(pos);
+            
+            while (positionsUsed[pos]) {
+                index = (index + 1) % allPositions.length;
+                pos = allPositions[index];
+            }
+            positionsUsed[pos] = true;
+
+            return pos;
+        }
+        self.customControl = function(options) {
+            var position = 'avl-top-right',
+                name = 'Custom Control ' + customControlsIDs++;
+
+            if (options) {
+                position = options.position || position;
+                name = options.name || name;
+            }
+            position = _getPosition(position);
+
+            var cc = new _CustomControl(map, position);
+            cc.name(name);
+
+            customControls[name] = cc;
+
+            return cc;
         }
 
         self.update = function(type, obj) {
@@ -674,7 +735,7 @@
             if (click) {
                 marker.on('click', function() {
                     d3.event.stopPropagation();
-                    click(name);
+                    click(self);
                 });
             }
 
@@ -721,6 +782,15 @@
                 return IDtag;
             }
             IDtag = id;
+            return self;
+        }
+
+        self.BGcolor = function(bg) {
+            if (!bg) {
+                return BGcolor;
+            }
+            BGcolor = bg;
+            marker.style('background', BGcolor);
             return self;
         }
 
@@ -984,7 +1054,12 @@
                     .style('z-index', -5);
 
                 rasterLayer = layer;
-                self.drawRasterLayer();
+
+                if (layers.length === 0) {
+                    self.zoomMap();
+                } else {
+                    self.drawRasterLayer();
+                }
             } else {
                 throw new AVAILmapException("No Layer Object argument");
             }
@@ -1042,6 +1117,12 @@
             }
             controls.addControl(type, position);
             return self;
+        }
+        self.customControl = function(position, options) {
+            if (controls === null) {
+                controls = new _Controls(self, map, projection, zoom);
+            }
+            return controls.customControl(options);
         }
 
         self.addAlert = function(alert) {

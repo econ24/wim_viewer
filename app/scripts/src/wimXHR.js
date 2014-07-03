@@ -9,10 +9,12 @@
 	// domain where API is located
 	var _URLbase = 'http://localhost:1337/';
 
+	var _XHR = null;
+
 	// AJAX get request convenience method
 	// simple redirects to the post method
 	wimXHR.get = function(url, callback) {
-		wimXHR.post(url, {database: _DATABASE}, callback);
+		return wimXHR.post(url, {database: _DATABASE}, callback);
 	}
 
 	// AJAX post request
@@ -24,10 +26,18 @@
 			url = url.slice(1);
 		}
 		data.database = _DATABASE;
-		_getXHR(_URLbase+url).post(JSON.stringify(data), function(error, data) {
+
+		_XHR = _getXHR(_URLbase+url);
+
+		_XHR.post(JSON.stringify(data), function(error, data) {
 			if (typeof callback !== undefined)
 				callback(error, data);
 		});
+		return _XHR;
+	}
+
+	wimXHR.abort = function() {
+		_XHR.abort();
 	}
 
 	function _getXHR(url) {

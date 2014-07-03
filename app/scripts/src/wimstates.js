@@ -1,6 +1,6 @@
 (function() {
 	var wimstates = {
-		version: 0.1,
+		version: 0.2,
 	}
 
 	var mapDIV = null,
@@ -10,11 +10,14 @@
 		centered = null,
 		$scope = null,
 		clicked = null,
-		stations = null;
+		prevMarker = null,
+		prevColor = null,
+		stations = null,
+		XHR = null;
 
-	var AVLmap = null;
-
-	var width = 1000,
+	var AVLmap = null,
+		customControl,
+		width = 1000,
 		height = 500;
 
 	var projection = null,
@@ -25,6 +28,10 @@
 		.range(['#deebf7', '#08306b']);
 
 	function _drawMap() {
+		var dataCollection = {
+			type: 'FeatureCollection',
+			features: []
+		}
 
     	var states = mapDIV.append('svg')
     		.style('position', 'absolute')
@@ -46,14 +53,27 @@
     		.each(function(d, i) {
     			if (d.properties.name) {
 		    		__JSON__[d.id] = d;
+		    		dataCollection.features.push(d);
 		    		var marker = avl.MapMarker(projection.invert(path.centroid(d)),
 						{name: d.id, BGcolor: colorScale(d.properties.stations.length), click: _clicked});
 		    		AVLmap.addMarker(marker);
 		    	}
     		});
 
+    	customControl.click(function() {
+    		_zoomToBounds(path.bounds(dataCollection));
+
+    		// if there is a pending xhr, then abort it
+    		if (XHR) {
+    			XHR.abort();
+    		}
+    		// if there is an active state, then clear it
+    		if (clicked) {
+    			_clicked(clicked);
+    		}
+    	});
+
     	AVLmap.addAlert(_update);
-    	AVLmap.zoomMap();
 
     	function _update() {
     		states.attr('d', path);
@@ -72,35 +92,14 @@
 				})
 		};
 
-		function _clicked(name) {
-	  		if (d3.event.defaultPrevented) return;
-
-			var collection = {
-				type: 'FeatureCollection',
-				features: []
-			};
-			if (name == clicked) {
-				_drawStationPoints(collection);
-				clicked = null;
-				return;
-			}
-	  		clicked = name;
-
-	    	var	bounds = path.bounds(__JSON__[name]),
-
-	    		wdth = bounds[1][0] - bounds[0][0],
+        function _zoomToBounds(bounds, callback) {
+	    	var	wdth = bounds[1][0] - bounds[0][0],
 	    		hght = bounds[1][1] - bounds[0][1],
 	    		center = projection.invert([bounds[0][0] + wdth/2,
 	    								    bounds[0][1] + hght/2]),
 
 	    		k = Math.min(width/wdth, height/hght),
 	    		scale = zoom.scale()*k;
-
-	    	if (name == '2') {
-	    		// this is a patch required to handle Alaska's odd geometry
-	    		center = [-152.2683, 65.3850];
-	    		scale = 8900;
-	    	}
 
 			zoom.scale(scale);
 	        projection
@@ -112,18 +111,55 @@
 
 	        zoom.translate(projection.translate());
 
-			_getStationPoints();
+	        if (callback) {
+	        	callback();
+	        }
 
 	        AVLmap.zoomMap();
+        }
+
+		function _clicked(marker) {
+	  		if (d3.event.defaultPrevented) return;
+
+			var collection = {
+					type: 'FeatureCollection',
+					features: []
+				};
+
+			if (marker == clicked) {
+				_drawStationPoints(collection);
+				prevMarker.BGcolor(prevColor);
+				clicked = prevMarker = prevColor = null;
+				_updateScopeStations([]);
+				return;
+			}
+			var name = marker.name();
+
+	  		clicked = marker;
+
+	  		if (prevMarker) {
+				prevMarker.BGcolor(prevColor);
+	  		}
+	  		prevMarker = marker;
+	  		prevColor = marker.BGcolor();
+
+	  		marker.BGcolor("#fdae6b");
+
+			_zoomToBounds(path.bounds(__JSON__[name]), _getStationPoints);
+
+			_getStationData(name);
 
 			function _getStationPoints() {
 				var URL = '/stations/stateGeo/';
-				wimXHR.get(URL + name, function(error, data) {
+				XHR = wimXHR.get(URL + name, function(error, data) {
+	            	XHR = null;
 	            	if (error) {
 	            		console.log(error);
 	            		return;
 	            	}
-					_drawStationPoints(_formatData(__JSON__[name], data));
+	            	if (clicked) {
+						_drawStationPoints(_formatData(__JSON__[name], data));
+					}
 				})
 			}
 
@@ -203,16 +239,15 @@
 		// this function queries backend for all stations
 		// and then updates $scope.stations variable which
 		// is used elsewhere
-		function _getStationData(stateData) {
+		function _getStationData(id) {
 			var URL = '/stations/byState/';
-			var id = stateData.id.toString();
+			//var id = stateData.id;
 
-			var regex = /^\d$/;
+			id = id.toString();
 
-			if (id.match(regex)) {
+			if (id.match(/^\d$/)) {
 				id = '0' + id;
 			}
-
 		  	var stations = [];
 
 			wimXHR.get(URL + id, function(error, data) {
@@ -220,6 +255,7 @@
             		console.log(error);
             		return;
             	}
+
 		  		data.rows.forEach(function(row){
 		  			var rowStation = row.f[0].v;
 		  			
@@ -228,16 +264,19 @@
 		  			}
 		  			stations[getStationIndex(rowStation)].years.push({'year':row.f[1].v,'percent':(row.f[4].v)*100,'AADT':Math.round(row.f[5].v)});
 		  		});
-		  		if (centered) {
-			  		$scope.$apply(function(){
-			  			$scope.stations = stations;
-		  			});
+		  		if (clicked) {
+		  			_updateScopeStations(stations);
 			  	}
 			});
 
 		  	function getStationIndex(stationID){
 		  		return stations.map(function(el) {return el.stationId;}).indexOf(stationID);
 		  	}
+		}
+		function _updateScopeStations(data) {
+	  		$scope.$apply(function(){
+	  			$scope.stations = data;
+  			});
 		}
 	}
 
@@ -258,7 +297,7 @@
 			.html('<b>Station ID:</b> ' + d.properties.stationID)
 	}
 	// states is an array of state objects
-	wimstates.drawMap = function(id, states, $s) {
+	wimstates.drawMap = function(id, states, $scp) {
 		mapDIV = d3.select(id);
 
 		width = parseInt(mapDIV.style('width'));
@@ -268,17 +307,14 @@
 			.style('height', height+"px");
 
 var dmn = [5000, 200000];
-var rng = ["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"];
-var rng = rng.reverse();
+var rng = ["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"].reverse();
 
 		AVLmap = avl.Map({id: id, minZoom: 3, maxZoom: 17})
 			.addLayer(avl.RasterLayer("http://{s}.tiles.mapbox.com/v3/am3081.map-lkbhqenw/{z}/{x}/{y}.png"))
-			.addLayer(avl.VectorLayer("http://localhost:8000/roads/{z}/{x}/{y}.topojson",
-				{properties:['type'], name: 'NY HPMS',
-				 choros: [{attr: 'aadt', domain: dmn, range: rng, style: 'stroke'}]}))
 			.addControl("zoom")
 			.addControl("info");
 
+		customControl = AVLmap.customControl('avl-top-left', {name: 'Reset Zoom', position: 'avl-top-left'});
 
 		projection = AVLmap.projection();
 		zoom = AVLmap.zoom();
@@ -287,7 +323,7 @@ var rng = rng.reverse();
 		popup = mapDIV.append('div')
 			.attr('class', 'station-popup');
 
-		$scope = $s;
+		$scope = $scp;
 
 		// states object
 		var statesObj = {};

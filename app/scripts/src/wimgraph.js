@@ -427,7 +427,6 @@
 		}
 
 		function _formatClassData(data) {
-			console.log(data);
 			// variable to keep track of class types present in current data set
 			var classValues = [],
 			// variable to keep track of weight classes in current data set
